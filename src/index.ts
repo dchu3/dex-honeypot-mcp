@@ -7,6 +7,7 @@ type Chain = keyof typeof CHAINS;
 
 const API_URL = "https://api.honeypot.is/v2/IsHoneypot";
 const API_KEY = process.env.HONEYPOT_API_KEY;
+const REQUEST_TIMEOUT_MS = 30000;
 
 interface HoneypotResponse {
   token?: { name?: string };
@@ -17,6 +18,18 @@ interface HoneypotResponse {
   chain?: { name?: string };
 }
 
+/** Sanitize string for safe markdown output */
+function sanitize(str: string): string {
+  return str.replace(/[*_`#\[\]]/g, "");
+}
+
+/**
+ * Checks whether a token address is a honeypot on a specified blockchain.
+ * @param address - Token contract address (40-char hex starting with 0x)
+ * @param chain - Optional chain to query (auto-detects if omitted)
+ * @returns Markdown-formatted honeypot analysis
+ * @throws Error on invalid address, timeout, or API error
+ */
 async function checkHoneypot(address: string, chain?: Chain): Promise<string> {
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
     throw new Error("Invalid address format. Expected a 40-character hexadecimal address starting with '0x'");
@@ -29,7 +42,7 @@ async function checkHoneypot(address: string, chain?: Chain): Promise<string> {
   if (API_KEY) headers["X-API-KEY"] = API_KEY;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(`${API_URL}?${params}`, { headers, signal: controller.signal });
@@ -37,7 +50,7 @@ async function checkHoneypot(address: string, chain?: Chain): Promise<string> {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("API request timed out");
+      throw new Error(`API request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds`);
     }
     throw error;
   }
@@ -47,18 +60,23 @@ async function checkHoneypot(address: string, chain?: Chain): Promise<string> {
     throw new Error(`API error: ${res.status} ${res.statusText}${errorText ? `. ${errorText}` : ""}`);
   }
 
-  const data: HoneypotResponse = await res.json();
+  let data: HoneypotResponse;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("Failed to parse API response");
+  }
 
-  const tokenName = data.token?.name ?? "Unknown";
-  const isHoneypot = data.honeypotResult?.isHoneypot ?? false;
-  const risk = data.summary?.risk ?? "unknown";
+  const tokenName = sanitize(data.token?.name ?? "Unknown");
+  const isHoneypot = data.honeypotResult?.isHoneypot ? "Yes" : "No";
+  const risk = sanitize(data.summary?.risk ?? "unknown");
+  // Tax values from API are already percentages (e.g., 5 = 5%)
   const buyTax = data.simulationResult?.buyTax?.toString() ?? "N/A";
   const sellTax = data.simulationResult?.sellTax?.toString() ?? "N/A";
   const transferTax = data.simulationResult?.transferTax?.toString() ?? "N/A";
-  const openSource = data.contractCode?.openSource !== undefined
-    ? data.contractCode.openSource
-    : "Unknown";
-  const chainName = data.chain?.name ?? chain ?? "auto-detected";
+  const openSource = data.contractCode?.openSource === true ? "Yes"
+    : data.contractCode?.openSource === false ? "No" : "Unknown";
+  const chainName = sanitize(data.chain?.name ?? chain ?? "auto-detected");
 
   return `# Honeypot Analysis for ${tokenName}
 - **Address**: ${address}

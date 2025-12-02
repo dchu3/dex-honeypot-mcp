@@ -1,0 +1,38 @@
+{
+  "name": "dex-honeypot-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for checking honeypot tokens on decentralized exchanges",
+  "type": "module",
+  "bin": {
+    "dex-honeypot-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "mcp",
+    "honeypot",
+    "dex",
+    "crypto",
+    "ethereum",
+    "bsc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.23.0",
+    "zod": "^3.25.17"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "shx": "^0.3.4",
+    "typescript": "^5.6.2",
+    "vitest": "^4.0.14"
+  }
+}

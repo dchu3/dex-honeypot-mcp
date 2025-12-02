@@ -20,12 +20,14 @@ Add to your MCP client config:
       "command": "node",
       "args": ["/path/to/dex-honeypot-mcp/dist/index.js"],
       "env": {
-        "HONEYPOT_API_KEY": "optional-api-key"
+        "HONEYPOT_API_KEY": "your-api-key-or-omit-for-free-tier"
       }
     }
   }
 }
 ```
+
+> **Note:** The API key is optional. Without it, you may be subject to rate limits. See [honeypot.is docs](https://docs.honeypot.is) for details.
 
 ## Tool
 

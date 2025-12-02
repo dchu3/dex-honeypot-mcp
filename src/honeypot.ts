@@ -135,9 +135,11 @@ export async function checkHoneypot(
     );
   }
 
-  const url = `https://api.honeypot.is/v2/IsHoneypot?address=${address}&chainID=${chainId}`;
+  const url = new URL("https://api.honeypot.is/v2/IsHoneypot");
+  url.searchParams.set("address", address);
+  url.searchParams.set("chainID", chainId);
 
-  const response = await fetch(url, {
+  const response = await fetch(url.toString(), {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -240,7 +242,7 @@ export function formatHoneypotResult(result: HoneypotCheckResult): string {
     lines.push(`- **Router:** ${result.pair.router}`);
     if (result.pair.createdAtTimestamp) {
       const createdDate = new Date(
-        parseInt(result.pair.createdAtTimestamp) * 1000
+        parseInt(result.pair.createdAtTimestamp, 10) * 1000
       );
       lines.push(`- **Created:** ${createdDate.toISOString()}`);
     }
